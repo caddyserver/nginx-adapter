@@ -23,12 +23,15 @@ import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
-	"github.com/caddyserver/caddy/v2/modules/caddyhttp/fileserver"
 )
 
 func init() {
 	caddyconfig.RegisterAdapter("nginx", Adapter{})
 }
+
+const ErrUnrecognized = "unrecognized or unsupported nginx directive"
+const ErrNamedLocation = "named locations marked by @ are unnsupported"
+const ErrExpiresAtTime = "usage of `expires @time` is not supported"
 
 // Adapter adapts NGINX config to Caddy JSON.
 type Adapter struct{}
@@ -40,10 +43,6 @@ func (Adapter) Adapt(body []byte, options map[string]interface{}) ([]byte, []cad
 	if err != nil {
 		return nil, nil, fmt.Errorf("parsing: %v", err)
 	}
-
-	// for _, dir := range dirs {
-	// 	log.Printf("%v %+v", dir.Params, dir.Block)
-	// }
 
 	ss := setupState{
 		servers: make(map[string]*caddyhttp.Server),
@@ -74,6 +73,8 @@ func (Adapter) Adapt(body []byte, options map[string]interface{}) ([]byte, []cad
 type setupState struct {
 	mainConfig caddy.Config
 	servers    map[string]*caddyhttp.Server
+
+	upstreams map[string]Upstream
 }
 
 func (ss *setupState) mainContext(dirs []Directive) ([]caddyconfig.Warning, error) {
@@ -90,7 +91,7 @@ func (ss *setupState) mainContext(dirs []Directive) ([]caddyconfig.Warning, erro
 					File:      dir.File,
 					Line:      dir.Line,
 					Directive: dir.Name(),
-					Message:   "unrecognized",
+					Message:   ErrUnrecognized,
 				},
 			}
 		}
@@ -116,7 +117,7 @@ func (ss *setupState) httpContext(dirs []Directive) ([]caddyconfig.Warning, erro
 					File:      dir.File,
 					Line:      dir.Line,
 					Directive: dir.Name(),
-					Message:   "unrecognized",
+					Message:   ErrUnrecognized,
 				},
 			}
 		}
@@ -128,96 +129,49 @@ func (ss *setupState) httpContext(dirs []Directive) ([]caddyconfig.Warning, erro
 	return warnings, nil
 }
 
-func (ss *setupState) serverContext(dirs []Directive) ([]caddyconfig.Warning, error) {
-	var warnings []caddyconfig.Warning
+var nginxToCaddyVars = map[string]string{
+	"$host:$port":     "{http.request.hostport}",
+	"$hostname:$port": "{http.request.hostport}",
+	"$host":           "{http.request.host}",
+	"$hostname":       "{http.request.host}",
+	"$server_port":    "{http.request.port}",
+	"$scheme":         "{http.request.scheme}",
+	"$request_uri":    "{http.request.uri}",
+	"$query_string":   "{http.request.uri.query_string}",
+	"$args":           "{http.request.uri.query_string}",
+	"$request_method": "{http.request.method}",
+}
 
-	srv := new(caddyhttp.Server)
-	srvName := "server_" + strconv.Itoa(len(ss.servers))
-	var route caddyhttp.Route
-
-nextDirective:
-	for _, dir := range dirs {
-		var warns []caddyconfig.Warning
-		var err error
-		switch dir.Name() {
-		case "listen":
-			addr := dir.Params[1]
-			if strings.HasPrefix(addr, "unix:") {
-				// unix socket
-				addr = "unix/" + addr[5:]
-			} else if isNumeric(addr) {
-				// port only
-				addr = ":" + addr
-			}
-
-			// see if existing server has this address, and if so, use
-			// it; Caddy does not allow servers to have overlapping
-			// listener addresses
-			for otherSrvName, otherSrv := range ss.servers {
-				for _, otherAddr := range otherSrv.Listen {
-					if addr == otherAddr {
-						srv = otherSrv
-						srvName = otherSrvName
-						continue nextDirective
-					}
-				}
-			}
-
-			srv.Listen = append(srv.Listen, addr)
-
-		case "server_name":
-			matcherSets := []map[string]caddyhttp.RequestMatcher{
-				{
-					"host": caddyhttp.MatchHost(dir.Params[1:]),
-				},
-			}
-			var matcherSetsEnc []map[string]json.RawMessage
-			for _, ms := range matcherSets {
-				msEncoded := make(map[string]json.RawMessage)
-				for matcherName, val := range ms {
-					jsonBytes, err := json.Marshal(val)
-					if err != nil {
-						return nil, fmt.Errorf("marshaling matcher set %#v: %v", matcherSets, err)
-					}
-					msEncoded[matcherName] = jsonBytes
-				}
-				matcherSetsEnc = append(matcherSetsEnc, msEncoded)
-			}
-			route.MatcherSetsRaw = matcherSetsEnc
-
-		case "root":
-			fileServer := fileserver.FileServer{
-				Root: dir.Param(1),
-				// TODO: all remaining fields...
-			}
-
-			route.HandlersRaw = []json.RawMessage{
-				caddyconfig.JSONModuleObject(fileServer, "handler", "file_server", &warns),
-			}
-
-		default:
-			warns = []caddyconfig.Warning{
-				{
-					File:      dir.File,
-					Line:      dir.Line,
-					Directive: dir.Name(),
-					Message:   "unrecognized",
-				},
-			}
-		}
-		warnings = append(warnings, warns...)
-		if err != nil {
-			return warnings, err
-		}
+func getCaddyVar(nginxVar string) string {
+	if v, ok := nginxToCaddyVars[nginxVar]; ok {
+		return v
 	}
-
-	if !route.Empty() {
-		srv.Routes = append(srv.Routes, route)
+	if strings.HasPrefix(nginxVar, "$cookie_") {
+		return fmt.Sprintf("{http.request.cookie.%s}", strings.TrimPrefix(nginxVar, "$cookie_"))
 	}
+	// variables prefixed with `$http_` correspond to respective header field with the suffix name
+	// Source: https://nginx.org/en/docs/http/ngx_http_core_module.html#var_http_
+	if strings.HasPrefix(nginxVar, "$http_") {
+		return fmt.Sprintf("{http.request.header.%s}", strings.TrimPrefix(nginxVar, "$header_"))
+	}
+	return fmt.Sprintf("{http.vars.%s}", strings.TrimPrefix(nginxVar, "$"))
+}
 
-	ss.servers[srvName] = srv
-
-	return warnings, nil
+func encodeMatcherSets(currentMatcherSet []map[string]caddyhttp.RequestMatcher) (caddyhttp.RawMatcherSets, error) {
+	// encode the matchers then set the result as raw matcher config
+	var matcherSetsEnc caddyhttp.RawMatcherSets
+	for _, ms := range currentMatcherSet {
+		msEncoded := make(map[string]json.RawMessage)
+		for matcherName, val := range ms {
+			jsonBytes, err := json.Marshal(val)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling matcher set %#v: %v", currentMatcherSet, err)
+			}
+			msEncoded[matcherName] = jsonBytes
+		}
+		matcherSetsEnc = append(matcherSetsEnc, msEncoded)
+	}
+	return matcherSetsEnc, nil
 }
 
 func isNumeric(s string) bool {

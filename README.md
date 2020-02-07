@@ -5,6 +5,54 @@ This is a [config adapter](https://github.com/caddyserver/caddy/wiki/v2:-Documen
 
 **This project is not complete, and we are asking the community to help finish its development.** Due to resource constraints, we are unable to do all the development on our own at this time. However, we hope you will pick it up and collaborate on it together as a community. We'll be happy to coordinate efforts from the community. Start by opening issues and pull requests, then reviewing pull requests and testing changes!
 
+Currently supported directives per context:
+
+* main:
+  * http
+* http:
+  * server
+* server:
+  * listen
+  * server_name
+  * location
+  * root
+  * access_log
+  * rewrite
+  * if
+* if:
+  * break
+  * return
+  * rewrite
+  * set
+* upstream:
+  * server
+  * hash
+  * ip_hash
+  * keepalive
+  * keepalive_requests
+  * keepalive_timeout
+  * ntlm
+  * least_conn
+  * random
+* location:
+  * location
+  * if
+  * root
+  * add_header
+  * deny
+  * allow
+  * rewrite
+  * fastcgi_pass
+  * proxy_pass
+  * expires
+  * return
+* if (in location):
+  * root
+  * gzip
+  * add_header
+  * expires
+  * proxy_pass
+
 Thank you, and we hope you have fun with it!
 
 ## Install

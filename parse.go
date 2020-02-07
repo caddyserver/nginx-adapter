@@ -15,7 +15,12 @@
 package nginxconf
 
 import (
+	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func parse(tokens []token) ([]Directive, error) {
@@ -26,6 +31,10 @@ func parse(tokens []token) ([]Directive, error) {
 type nginxParser struct {
 	tokens []token
 	cursor int // incrementing this is analogous to consuming the token
+}
+
+func (p *nginxParser) currentToken() token {
+	return p.tokens[p.cursor]
 }
 
 // nextBlock returns the next block of directives.
@@ -79,10 +88,144 @@ func (p *nginxParser) next() (Directive, error) {
 			dir.Block = dirs
 			break
 		}
+		if tkn.text == "include" {
+			p.cursor++
+			err := p.doInclude()
+			if err != nil {
+				return Directive{}, err
+			}
+		}
 		dir.Params = append(dir.Params, tkn.text)
 	}
 
 	return dir, nil
+}
+
+// Reference: https://wiki.debian.org/Nginx/DirectoryStructure
+const nginxConfPrefix = "/etc/nginx"
+
+var nginxConfDirs = []string{
+	"conf.d/",
+	"modules-available/",
+	"modules-enabled/",
+	"sites-available/",
+	"sites-enabled/",
+	"snippets/",
+}
+var nginxStdConfs = []string{
+	"fastcgi.conf",
+	"fastcgi_params",
+	"koi-utf",
+	"koi-win",
+	"mime.types",
+	"nginx.conf",
+	"proxy_params",
+	"scgi_params",
+	"uwsgi_params",
+	"win-utf",
+}
+
+// TODO: support relative path includes
+func (p *nginxParser) doInclude() error {
+	includeToken := p.currentToken()
+	includeArg := filepath.Clean(includeToken.text)
+
+	if strings.Count(includeArg, "*") > 1 || strings.Count(includeArg, "?") > 1 ||
+		(strings.Contains(includeArg, "[") && strings.Contains(includeArg, "]")) {
+		// See issue #2096 - a pattern with many glob expansions can hang for too long
+		return fmt.Errorf("Glob pattern may only contain one wildcard (*), but has others: %s", includeArg)
+	}
+	var importedFiles []string
+	if filepath.IsAbs(includeArg) {
+		matches, err := filepath.Glob(includeArg)
+		if err != nil {
+			return err
+		}
+		for _, v := range matches {
+			if _, err := os.Stat(v); !os.IsNotExist(err) {
+				importedFiles = append(importedFiles, v)
+			}
+		}
+	}
+
+	// if not absolute, we'll only support including files within /etc/nginx/.
+	if len(importedFiles) == 0 {
+		// is it one of the standard files?
+		for _, v := range nginxStdConfs {
+			if v == includeArg {
+				importedFiles = append(importedFiles, filepath.Join(nginxConfPrefix, v))
+				break
+			}
+		}
+		// by here it is not one of the direct descendant files of /etc/nginx/.
+		// Is it in one of the subdirectories?
+		//
+		// The `filepath.HasPrefix` is bad before it just does `strings.HasPrefix` and
+		// doesn't respoect directories boundaries.
+		for _, v := range nginxConfDirs {
+			testablePath := filepath.Join(nginxConfPrefix, v, includeArg)
+			// The argument could have a glob (e.g. custom-*.conf), so expand the glob.
+			matches, err := filepath.Glob(filepath.Clean(testablePath))
+			if err != nil {
+				return err // this is bad glob pattern, so nothing can be done except return
+			}
+			importedFiles = append(importedFiles, matches...)
+		}
+	}
+
+	var importedTokens []token
+	for _, importFile := range importedFiles {
+		newTokens, err := p.doSingleInclude(importFile)
+		if err != nil {
+			return err
+		}
+		importedTokens = append(importedTokens, newTokens...)
+	}
+
+	// splice out the import directive and its argument (2 tokens total)
+	tokensBefore := p.tokens[:p.cursor-1]
+	tokensAfter := p.tokens[p.cursor+1:]
+
+	// splice the imported tokens in the place of the import statement
+	// and rewind cursor so Next() will land on first imported token
+	p.tokens = append(tokensBefore, append(importedTokens, tokensAfter...)...)
+	p.cursor--
+
+	return nil
+}
+
+// doSingleImport lexes the individual file at importFile and returns
+// its tokens or an error, if any.
+func (p *nginxParser) doSingleInclude(importFile string) ([]token, error) {
+	file, err := os.Open(importFile)
+	if err != nil {
+		return nil, fmt.Errorf("Could not import %s: %v", importFile, err)
+	}
+	defer file.Close()
+
+	if info, err := file.Stat(); err != nil {
+		return nil, fmt.Errorf("Could not import %s: %v", importFile, err)
+	} else if info.IsDir() {
+		return nil, fmt.Errorf("Could not import %s: is a directory", importFile)
+	}
+
+	input, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read imported file %s: %v", importFile, err)
+	}
+	importedTokens := allTokens(importFile, input)
+	return importedTokens, nil
+}
+
+// allTokens lexes the entire input, but does not parse it.
+// It returns all the tokens from the input, unstructured
+// and in order.
+func allTokens(filename string, input []byte) []token {
+	tokens := tokenize(input)
+	for i := range tokens {
+		tokens[i].file = filename
+	}
+	return tokens
 }
 
 // Directive represents an nginx configuration directive.
