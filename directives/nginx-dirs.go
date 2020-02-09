@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Directive struct {
@@ -28,7 +29,7 @@ func main() {
 		log.Println("provide the path to the directory of nginx.org repo as argument")
 		os.Exit(1)
 	}
-	fullPath := filepath.Join(os.Args[1], pathToDocs)
+	fullPath := filepath.Clean(filepath.Join(os.Args[1], pathToDocs))
 	matches, err := filepath.Glob(fullPath)
 	if err != nil {
 		log.Printf("error globing: %s", err)
@@ -73,6 +74,7 @@ func main() {
 
 	for ctx, dirs := range contextDirs {
 		func(ctx string, dirs []string) {
+			ctx = strings.ReplaceAll(ctx, " ", "_")
 			f, err := os.Create(fmt.Sprintf("%s.txt", ctx))
 			if err != nil {
 				log.Printf("Error creating out file: %s", err)
