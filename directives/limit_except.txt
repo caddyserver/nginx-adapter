@@ -1,0 +1,11 @@
+allow
+deny
+auth_basic
+auth_basic_user_file
+auth_jwt
+auth_jwt_key_file
+auth_jwt_key_request
+js_content
+access_log
+perl
+proxy_pass

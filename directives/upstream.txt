@@ -1,0 +1,17 @@
+server
+zone
+state
+hash
+ip_hash
+keepalive
+keepalive_requests
+keepalive_timeout
+ntlm
+least_conn
+least_time
+queue
+random
+resolver
+resolver_timeout
+sticky
+sticky_cookie_insert
