@@ -13,3 +13,9 @@ The NGINX documentation is stored as XML files as part of the source code of the
 The `nginx-dirs.go` parses the XML files of the NGINX docs stored locally, collect the directives into context buckets, then output a collection of text files named after the context and containing the list of directives allowed within said context.
 
 The text files serve as reference for contributors to know what directives are expected within a context. They serve as an exhaustive list and used as checklist items and an indicator of how complete is the coverage of the adapter.
+
+## Usage 
+
+1- Clone https://hg.nginx.org/nginx.org
+
+2- Execute: `go run nginx-dirs.go <path to cloned repo in step 1>`
