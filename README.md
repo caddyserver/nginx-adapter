@@ -82,8 +82,8 @@ $ go build
 
 Using this config adapter is the same as all the other config adapters.
 
-- [Learn about config adapters in the Caddy docs](https://github.com/caddyserver/caddy/wiki/v2:-Documentation#config-adapters)
-- You can adapt your config with the [`adapt` command](https://github.com/caddyserver/caddy/wiki/v2:-Documentation#adapt)
+- [Learn about config adapters in the Caddy docs](https://caddyserver.com/docs/config-adapters)
+- You can adapt your config with the [`adapt` command](https://caddyserver.com/docs/command-line#caddy-adapt)
 
 You can also run Caddy directly with an nginx config using [`caddy run|start --config nginx.conf --adapter nginx`](https://github.com/caddyserver/caddy/wiki/v2:-Documentation#run) (however, we do not recommend this until the config adapter is completed).
 
