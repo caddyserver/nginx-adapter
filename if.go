@@ -119,7 +119,7 @@ func calculateIfMatcher(dir Directive) (caddy.ModuleMap, []caddyconfig.Warning) 
 			// as wildcard matcher.
 			// https://github.com/caddyserver/caddy/blob/271b5af14894a8cca5fc6aa6f1c17823a1fb5ff3/modules/caddyhttp/server.go#L139
 			routeMatcher = caddy.ModuleMap{
-				"var_regexp": caddyconfig.JSON(caddyhttp.VarsMatcher{getCaddyVar(loperand): roperand}, &warns),
+				"vars": caddyconfig.JSON(caddyhttp.VarsMatcher{getCaddyVar(loperand): roperand}, &warns),
 			}
 		case "~", "!~", "~*", "!~*": // regexps
 			pattern := roperand
@@ -127,7 +127,7 @@ func calculateIfMatcher(dir Directive) (caddy.ModuleMap, []caddyconfig.Warning) 
 				pattern = "(?i)" + pattern // case-insensitive matching
 			}
 			routeMatcher = caddy.ModuleMap{
-				"var_regexp": caddyconfig.JSON(caddyhttp.MatchVarRE{
+				"vars_regexp": caddyconfig.JSON(caddyhttp.MatchVarsRE{
 					getCaddyVar(loperand): &caddyhttp.MatchRegexp{
 						Pattern: pattern,
 					},
