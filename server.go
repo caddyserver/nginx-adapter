@@ -152,7 +152,7 @@ nextDirective:
 			srv.Routes = append(srv.Routes, route)
 		case "access_log":
 			if dir.Param(1) == "off" {
-				continue
+				continue nextDirective
 			}
 
 			// just mark the variable

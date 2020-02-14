@@ -87,7 +87,6 @@ func (l *nginxLexer) nextToken() bool {
 					escaped = true
 					continue
 				} else if ch == quoted {
-					quoted = 0
 					return makeToken()
 				}
 			}

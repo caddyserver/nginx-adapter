@@ -17,6 +17,7 @@ func (ss *setupState) locationContext(rootMatcher map[string]caddyhttp.RequestMa
 
 	currentMatcherSet := []map[string]caddyhttp.RequestMatcher{rootMatcher}
 
+nextDirective:
 	for _, dir := range dirs {
 		var warns []caddyconfig.Warning
 
@@ -60,7 +61,7 @@ func (ss *setupState) locationContext(rootMatcher map[string]caddyhttp.RequestMa
 						Directive: dir.Name(),
 						Message:   ErrNamedLocation,
 					})
-					continue
+					continue nextDirective
 				}
 				// append wild character because nginx treat naked path matchers as prefix matchers
 				matchConfMap["path"] = caddyhttp.MatchPath([]string{dir.Param(1) + "*"})
@@ -78,7 +79,7 @@ func (ss *setupState) locationContext(rootMatcher map[string]caddyhttp.RequestMa
 			matcher, w := calculateIfMatcher(dir)
 			warns = append(warns, w...)
 			if matcher == nil { // warning of failures already appended
-				continue
+				continue nextDirective
 			}
 			h, w := ss.ifInLocationContext(dir.Block)
 			warns = append(warns, w...)
