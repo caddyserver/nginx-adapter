@@ -60,7 +60,7 @@ func (ss *setupState) locationContext(rootMatcher map[string]caddyhttp.RequestMa
 						Directive: dir.Name(),
 						Message:   ErrNamedLocation,
 					})
-					return nil, warnings, nil
+					continue
 				}
 				// append wild character because nginx treat naked path matchers as prefix matchers
 				matchConfMap["path"] = caddyhttp.MatchPath([]string{dir.Param(1) + "*"})

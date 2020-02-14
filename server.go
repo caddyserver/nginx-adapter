@@ -99,7 +99,7 @@ nextDirective:
 						Directive: dir.Name(),
 						Message:   ErrNamedLocation,
 					})
-					return warnings, nil
+					continue nextDirective
 				}
 				// append wild character because nginx treat naked path matchers as prefix matchers
 				matcher = caddyhttp.MatchPath([]string{dir.Param(1) + "*"})
@@ -116,7 +116,8 @@ nextDirective:
 			// encode the matchers then set the result as raw matcher config
 			matcherSetsEnc, err = encodeMatcherSets(locationMatcherSet)
 			if err != nil {
-				return nil, err
+				warnings = append(warnings, warns...)
+				return warnings, err
 			}
 			// set the matcher to route
 			route.MatcherSetsRaw = matcherSetsEnc
