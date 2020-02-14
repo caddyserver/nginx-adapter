@@ -85,6 +85,8 @@ func (ss *setupState) mainContext(dirs []Directive) ([]caddyconfig.Warning, erro
 		switch dir.Name() {
 		case "http":
 			warns, err = ss.httpContext(dir.Block)
+		case "server":
+			warns, err = ss.serverContext(dir.Block)
 		default:
 			warns = []caddyconfig.Warning{
 				{
