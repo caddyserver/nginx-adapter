@@ -9,6 +9,7 @@ Currently supported directives per context:
 
 * main:
   * http
+  * server
 * http:
   * server
 * server:
