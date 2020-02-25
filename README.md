@@ -59,24 +59,25 @@ Thank you, and we hope you have fun with it!
 
 **Note: This module is only compatible with Caddy 2, which is currently in beta.**
 
-First, go get this module:
+First, clone this repository:
 
 ```
-$ go get github.com/caddyserver/nginx-adapter
+$ git clone github.com/caddyserver/nginx-adapter caddy-nginx-adapter
 ```
 
-To compile, simply `go build` Caddy 2 with this adapter plugged in. Add this to the list of imports:
+Move into the cloned directory:
 
 ```
-	_ "github.com/caddyserver/nginx-adapter"
+$ cd caddy-nginx-adapter
 ```
 
 Then run:
 
 ```
-$ go build
+$ ./build_caddy.sh
 ```
 
+The script will create a directory named `caddy`, and the custom built Caddy executable is inside it and named `caddy_v2`.
 
 ## Use
 
