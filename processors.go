@@ -20,6 +20,8 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
 )
 
+var splitPathInfoExtension = regexp.MustCompile(`(\.[[:alnum:]]+)`)
+
 func processAllow(dir Directive) map[string]caddyhttp.RequestMatcher {
 	var reqMatcher caddyhttp.RequestMatcher
 	var key string
@@ -235,15 +237,20 @@ func processFastCGIPass(dirs []Directive) (*caddyhttp.Subroute, []caddyconfig.Wa
 		HandlersRaw:    []json.RawMessage{caddyconfig.JSONModuleObject(rewriteHandler, "handler", "rewrite", nil)},
 	}
 
-	extension := ".php"
-	if v, ok := getDirective(dirs, "fastcgi_split_path_info"); ok {
-		extension = v.Param(1)
+	extension := []string{".php"}
+
+	// The fastcgi_split_path_info directive takes a regexp with two capture groups,
+	// the first capture group points to the script file name and the second is for path info.
+	// For example, the regexp for php could be `^(.+.php)(/.*)$`. Caddy splits over the extension. So splitPathInfoExtension
+	// finds the extension in the provided input, extract it, and use it for the config.
+	if v, ok := getDirective(dirs, "fastcgi_split_path_info"); ok && splitPathInfoExtension.MatchString(v.Param(1)) {
+		extension[0] = splitPathInfoExtension.FindStringSubmatch(v.Param(1))[1]
 	}
 
 	// route to actually reverse proxy requests to PHP files;
 	// match only requests that are for PHP files
 	rpMatcherSet := caddy.ModuleMap{
-		"path": caddyconfig.JSON([]string{"*" + extension}, &warns),
+		"path": caddyconfig.JSON([]string{"*" + extension[0]}, &warns),
 	}
 
 	// set up the transport for FastCGI, and specifically PHP
