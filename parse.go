@@ -94,10 +94,12 @@ func (p *nginxParser) next() (Directive, error) {
 			if err != nil {
 				return Directive{}, err
 			}
+			tkn = p.tokens[p.cursor]
+			dir.File = tkn.file
+			dir.Line = tkn.line
 		}
 		dir.Params = append(dir.Params, tkn.text)
 	}
-
 	return dir, nil
 }
 
@@ -184,13 +186,12 @@ func (p *nginxParser) doInclude() error {
 
 	// splice out the import directive and its argument (2 tokens total)
 	tokensBefore := p.tokens[:p.cursor-1]
-	tokensAfter := p.tokens[p.cursor+1:]
+	tokensAfter := p.tokens[p.cursor+2:]
 
 	// splice the imported tokens in the place of the import statement
 	// and rewind cursor so Next() will land on first imported token
 	p.tokens = append(tokensBefore, append(importedTokens, tokensAfter...)...)
 	p.cursor--
-
 	return nil
 }
 
