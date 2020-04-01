@@ -261,8 +261,17 @@ func processFastCGIPass(dirs []Directive) (*caddyhttp.Subroute, []caddyconfig.Wa
 		TransportRaw: caddyconfig.JSONModuleObject(fcgiTransport, "protocol", "fastcgi", nil),
 	}
 
+	/***
+	* If upstream doesn't have scheme explicitly specified as scheme://host, then
+	* assume it's tcp by prefixing it with tcp://. Later we check if the hostname is `unix:`.
+	* If so, then the arguemnt of fastcgi_pass was of the form `unix:/some/path`.
+	**/
 	passDirective, _ := getDirective(dirs, "fastcgi_pass")
-	upstream, err := url.Parse(passDirective.Param(1))
+	passArgs := passDirective.Param(1)
+	if !strings.Contains(passArgs, "://") {
+		passArgs = "tcp://" + passArgs
+	}
+	upstream, err := url.Parse(passArgs)
 	if err != nil {
 		warns = append(warns, caddyconfig.Warning{
 			File:      passDirective.File,
@@ -272,9 +281,12 @@ func processFastCGIPass(dirs []Directive) (*caddyhttp.Subroute, []caddyconfig.Wa
 		})
 		return nil, warns
 	}
-	network := "tcp"
-	host := upstream.Hostname()
-	if upstream.Hostname() == unixPrefix {
+
+	var network, host string = upstream.Scheme, upstream.Hostname()
+
+	// the argument of fastcgi_pass could have been of either of these forms:
+	// http://unix:/tmp/backend.socket:/uri/ , unix:///some/path
+	if upstream.Hostname() == unixPrefix || upstream.Scheme == "unix" {
 		network = "unix"
 		host = (strings.Split(upstream.Path, ":"))[0]
 	}
