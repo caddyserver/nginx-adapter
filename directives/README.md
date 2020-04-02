@@ -1,6 +1,6 @@
 ## Problem
 
-The NGINX documentation is broken up per module. Every module lists its directives and each directive lists the contexts where it can be used. The development of the adapter requires listing of directives broken up by contexts rather than by module. For example, we need the answer to questions of the form:
+The NGINX documentation is broken up per module. Every module lists its directives and each directive lists the contexts where it can be used. The development of the adapter requires listing of directives broken up by contexts rather than by module. In other words, we need the answer to questions of the form:
 
 	Given the context X, what directives are usable within it?
 

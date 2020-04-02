@@ -59,25 +59,26 @@ Thank you, and we hope you have fun with it!
 
 **Note: This module is only compatible with Caddy 2, which is currently in beta.**
 
-First, clone this repository:
+First, the [xcaddy](https://github.com/caddyserver/xcaddy) command:
 
-```
-$ git clone github.com/caddyserver/nginx-adapter caddy-nginx-adapter
-```
-
-Move into the cloned directory:
-
-```
-$ cd caddy-nginx-adapter
+```shell
+$ go get -u github.com/caddyserver/xcaddy/cmd/xcaddy
 ```
 
-Then run:
+Use the command in the following format:
 
-```
-$ ./build_caddy.sh
+```shell
+$ xcaddy build <version>
+	[--output <file>]
+	[--with <module[@version]>...]
 ```
 
-The script will create a directory named `caddy`, and the custom built Caddy executable is inside it and named `caddy_v2`.
+For example:
+
+```shell
+$ xcaddy build v2.0.0-beta.20 \
+	--with github.com/caddyserver/nginx-adapter@580d27d4d7cb0351b3f25cc9e79850344782afcf
+```
 
 ## Use
 
