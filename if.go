@@ -135,7 +135,11 @@ func calculateIfMatcher(dir Directive) (caddy.ModuleMap, []caddyconfig.Warning) 
 			}
 			if op == "!~" || op == "!~*" {
 				routeMatcher = caddy.ModuleMap{
-					"not": caddyconfig.JSON(caddyhttp.MatchNegate{MatchersRaw: routeMatcher}, &warns),
+					"not": caddyconfig.JSON(caddyhttp.MatchNot{
+						MatcherSetsRaw: []caddy.ModuleMap{
+							routeMatcher,
+						},
+					}, &warns),
 				}
 			}
 		default:

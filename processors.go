@@ -208,9 +208,11 @@ func processFastCGIPass(dirs []Directive) (*caddyhttp.Subroute, []caddyconfig.Wa
 		"file": caddyconfig.JSON(fileserver.MatchFile{
 			TryFiles: []string{"{http.request.uri.path}/" + index},
 		}, &warns),
-		"not": caddyconfig.JSON(caddyhttp.MatchNegate{
-			MatchersRaw: caddy.ModuleMap{
-				"path": caddyconfig.JSON(caddyhttp.MatchPath{"*/"}, &warns),
+		"not": caddyconfig.JSON(caddyhttp.MatchNot{
+			MatcherSetsRaw: []caddy.ModuleMap{
+				{
+					"path": caddyconfig.JSON(caddyhttp.MatchPath{"*/"}, &warns),
+				},
 			},
 		}, &warns),
 	}
