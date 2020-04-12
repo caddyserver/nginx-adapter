@@ -18,6 +18,7 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/reverseproxy/fastcgi"
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp/rewrite"
+	ntlmproxy "github.com/caddyserver/ntlm-transport"
 )
 
 var splitPathInfoExtension = regexp.MustCompile(`(\.[[:alnum:]]+)`)
@@ -368,7 +369,9 @@ func processProxyPass(dir Directive, upstreams map[string]Upstream) (*reversepro
 		var rt http.RoundTripper
 		if u.NTLM {
 			transport = "http_ntlm"
-			nt := &reverseproxy.NTLMTransport{}
+			nt := &ntlmproxy.NTLMTransport{
+				HTTPTransport: new(reverseproxy.HTTPTransport),
+			}
 			if ur.Scheme == "https" {
 				nt.TLS = new(reverseproxy.TLSConfig)
 			}
