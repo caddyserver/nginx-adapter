@@ -111,6 +111,16 @@ func (ss *setupState) httpContext(dirs []Directive) ([]caddyconfig.Warning, erro
 		switch dir.Name() {
 		case "server":
 			warns, err = ss.serverContext(dir.Block)
+		case "upstream":
+			up, w, err := ss.upstreamContext(dir.Block)
+			warns = append(warns, w...)
+			if err != nil {
+				return warns, err
+			}
+			if ss.upstreams == nil {
+				ss.upstreams = make(map[string]Upstream)
+			}
+			ss.upstreams[dir.Param(1)] = up
 		default:
 			warns = []caddyconfig.Warning{
 				{
