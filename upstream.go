@@ -1,6 +1,7 @@
 package nginxconf
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -36,21 +37,34 @@ func (ss *setupState) upstreamContext(dirs []Directive) (Upstream, []caddyconfig
 	for _, dir := range dirs {
 		switch dir.Name() {
 		case "server":
+			// From: https://nginx.org/en/docs/http/ngx_http_upstream_module.html
+			// The address can be specified as a domain name or IP address, with an optional port,
+			// or as a UNIX-domain socket path specified after the “unix:” prefix.
 			addr := dir.Param(1)
-			var netAddress string
-			if strings.HasPrefix(addr, "unix:") {
+			var network, hostport string = "tcp", addr
+			if strings.HasPrefix(addr, unixPrefix) {
 				slicedAddress := strings.Split(addr, "unix:")
-				host, port, _ := net.SplitHostPort(slicedAddress[1])
-				network := slicedAddress[0][0 : len(unixPrefix)-1]
-				netAddress = caddy.JoinNetworkAddress(network, host, port)
+				hostport = slicedAddress[1]
+				network = "unix" // ends up being "unix"
 			}
-			u := &reverseproxy.Upstream{Dial: netAddress}
+			host, port, err := net.SplitHostPort(hostport)
+			if err != nil {
+				warns = append(warns, caddyconfig.Warning{
+					File:      dir.File,
+					Line:      dir.Line,
+					Directive: dir.Name(),
+					Message:   fmt.Sprintf("error splitting the host/port of upstream: %s", hostport),
+				})
+				return upstream, warns, err
+			}
+			addr = caddy.JoinNetworkAddress(network, host, port)
+			u := &reverseproxy.Upstream{Dial: addr}
 
 			if len(dir.Params) > 2 {
 				params := dir.Params[2:]
 				for _, v := range params {
 					if strings.HasPrefix(v, "weight") {
-						weight := strings.Split(v, "=")[2]
+						weight := strings.Split(v, "=")[1]
 						w, _ := strconv.ParseInt(weight, 10, 32)
 						u.MaxRequests = int(w)
 					}
