@@ -137,7 +137,7 @@ nextDirective:
 		case "root":
 			route.MatcherSetsRaw = []caddy.ModuleMap{
 				{
-					"host": caddyconfig.JSON(hostMatcher, &warns),
+					"host": caddyconfig.JSON(hostMatcher["host"], &warns),
 				},
 			}
 			fileServer := fileserver.FileServer{
