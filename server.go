@@ -212,7 +212,7 @@ nextDirective:
 	}
 
 	if logName != "" {
-		loggerName := srvName + "_log"
+		loggerName := strings.Join(hosts, "-") + "_log"
 		fileWriter := map[string]interface{}{
 			"filename": logName,
 		}
