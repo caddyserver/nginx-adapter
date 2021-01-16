@@ -21,8 +21,8 @@ import (
 	"unicode"
 )
 
-func tokenize(body []byte) []token {
-	lex := newLexer("nginx.conf", bytes.NewReader(body))
+func tokenize(body []byte, filename string) []token {
+	lex := newLexer(filename, bytes.NewReader(body))
 
 	var tokens []token
 	for lex.nextToken() {
