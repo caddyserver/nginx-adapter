@@ -144,6 +144,10 @@ nextDirective:
 				Root: dir.Param(1),
 				// TODO: all remaining fields...
 			}
+			// inject the argument of the index directive if exists
+			if indexDir, found := getDirective(dirs, "index"); found {
+				fileServer.IndexNames = indexDir.Params[1:]
+			}
 
 			route.HandlersRaw = append(route.HandlersRaw,
 				caddyconfig.JSONModuleObject(fileServer, "handler", "file_server", &warns),

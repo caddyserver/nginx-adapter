@@ -11,11 +11,14 @@ Currently supported directives per context:
   * http
 * http:
   * server
+  * index
+  * upstream
 * server:
   * listen
   * server_name
   * location
   * root
+  * index
   * access_log
   * rewrite
   * if

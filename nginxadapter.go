@@ -109,6 +109,12 @@ func (ss *setupState) httpContext(dirs []Directive) ([]caddyconfig.Warning, erro
 		var warns []caddyconfig.Warning
 		var err error
 		switch dir.Name() {
+		case "index":
+			for k, d := range dirs {
+				if d.Name() == "server" {
+					dirs[k].Block = append(d.Block, dir)
+				}
+			}
 		case "server":
 			warns, err = ss.serverContext(dir.Block)
 		case "upstream":
