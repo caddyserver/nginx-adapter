@@ -20,8 +20,47 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+
+	which "github.com/hairyhenderson/go-which"
 )
+
+// Reference: https://wiki.debian.org/Nginx/DirectoryStructure
+var nginxConfPrefix string
+
+func init() {
+	switch runtime.GOOS {
+	case "freebsd", "darwin":
+		// https://www.cyberciti.biz/faq/freebsd-install-nginx-webserver/
+		nginxConfPrefix = "/usr/local/etc/nginx"
+	case "netbsd":
+		// https://www.netbsd.mx/nginx-php.html
+		nginxConfPrefix = "/usr/pkg/etc/nginx"
+	case "solaris", "illumos":
+		// https://www.nginx.com/resources/wiki/start/topics/tutorials/solaris_11/
+		nginxConfPrefix = "/opt/local/nginx"
+		for k, v := range nginxConfDirs {
+			if v == "conf.d/" {
+				nginxConfDirs[k] = "conf/"
+			}
+		}
+	case "windows":
+		// "nginx/Windows uses the directory where it has been run as the prefix for relative paths in the configuration."
+		// Source: https://nginx.org/en/docs/windows.html
+		// However, the "conf/" directory, where some of the standard snippets live, is neighboring the nginx.exe. Therefore,
+		// it's more likely to hit a match in this root than elsewhere.
+		nginxPath := which.Which("nginx.exe")
+		nginxConfPrefix = filepath.Dir(nginxPath)
+		for k, v := range nginxConfDirs {
+			if v == "conf.d/" {
+				nginxConfDirs[k] = "conf/"
+			}
+		}
+	default:
+		nginxConfPrefix = "/etc/nginx"
+	}
+}
 
 func parse(tokens []token) ([]Directive, error) {
 	parser := nginxParser{tokens: tokens}
@@ -103,8 +142,6 @@ func (p *nginxParser) next() (Directive, error) {
 	return dir, nil
 }
 
-// Reference: https://wiki.debian.org/Nginx/DirectoryStructure
-var nginxConfPrefix string
 var nginxConfDirs = []string{
 	"conf.d/",
 	"modules-available/",
@@ -163,6 +200,8 @@ func (p *nginxParser) doInclude() error {
 				break
 			}
 		}
+	}
+	if len(importedFiles) == 0 {
 		// by here it is not one of the direct descendant files of /etc/nginx/.
 		// Is it in one of the subdirectories?
 		//
