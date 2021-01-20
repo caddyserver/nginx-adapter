@@ -20,8 +20,47 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+
+	which "github.com/hairyhenderson/go-which"
 )
+
+// Reference: https://wiki.debian.org/Nginx/DirectoryStructure
+var nginxConfPrefix string
+
+func init() {
+	switch runtime.GOOS {
+	case "freebsd", "darwin":
+		// https://www.cyberciti.biz/faq/freebsd-install-nginx-webserver/
+		nginxConfPrefix = "/usr/local/etc/nginx"
+	case "netbsd":
+		// https://www.netbsd.mx/nginx-php.html
+		nginxConfPrefix = "/usr/pkg/etc/nginx"
+	case "solaris", "illumos":
+		// https://www.nginx.com/resources/wiki/start/topics/tutorials/solaris_11/
+		nginxConfPrefix = "/opt/local/nginx"
+		for k, v := range nginxConfDirs {
+			if v == "conf.d/" {
+				nginxConfDirs[k] = "conf/"
+			}
+		}
+	case "windows":
+		// "nginx/Windows uses the directory where it has been run as the prefix for relative paths in the configuration."
+		// Source: https://nginx.org/en/docs/windows.html
+		// However, the "conf/" directory, where some of the standard snippets live, is neighboring the nginx.exe. Therefore,
+		// it's more likely to hit a match in this root than elsewhere.
+		nginxPath := which.Which("nginx.exe")
+		nginxConfPrefix = filepath.Dir(nginxPath)
+		for k, v := range nginxConfDirs {
+			if v == "conf.d/" {
+				nginxConfDirs[k] = "conf/"
+			}
+		}
+	default:
+		nginxConfPrefix = "/etc/nginx"
+	}
+}
 
 func parse(tokens []token) ([]Directive, error) {
 	parser := nginxParser{tokens: tokens}
@@ -103,9 +142,6 @@ func (p *nginxParser) next() (Directive, error) {
 	return dir, nil
 }
 
-// Reference: https://wiki.debian.org/Nginx/DirectoryStructure
-const nginxConfPrefix = "/etc/nginx"
-
 var nginxConfDirs = []string{
 	"conf.d/",
 	"modules-available/",
@@ -137,20 +173,25 @@ func (p *nginxParser) doInclude() error {
 		// See issue #2096 - a pattern with many glob expansions can hang for too long
 		return fmt.Errorf("Glob pattern may only contain one wildcard (*), but has others: %s", includeArg)
 	}
+
+	// first assume the included file is relative
 	var importedFiles []string
-	if filepath.IsAbs(includeArg) {
-		matches, err := filepath.Glob(includeArg)
-		if err != nil {
-			return err
-		}
-		for _, v := range matches {
-			if _, err := os.Stat(v); !os.IsNotExist(err) {
-				importedFiles = append(importedFiles, v)
-			}
+	globArg := includeArg
+	if !filepath.IsAbs(includeArg) {
+		currentConfDir := filepath.Dir(p.currentToken().file)
+		globArg = filepath.Join(currentConfDir, includeArg)
+	}
+	matches, err := filepath.Glob(globArg)
+	if err != nil {
+		return err
+	}
+	for _, v := range matches {
+		if _, err := os.Stat(v); !os.IsNotExist(err) {
+			importedFiles = append(importedFiles, v)
 		}
 	}
 
-	// if not absolute, we'll only support including files within /etc/nginx/.
+	// if not absolute, we'll only support including files within standard config location.
 	if len(importedFiles) == 0 {
 		// is it one of the standard files?
 		for _, v := range nginxStdConfs {
@@ -159,6 +200,8 @@ func (p *nginxParser) doInclude() error {
 				break
 			}
 		}
+	}
+	if len(importedFiles) == 0 {
 		// by here it is not one of the direct descendant files of /etc/nginx/.
 		// Is it in one of the subdirectories?
 		//
@@ -173,6 +216,10 @@ func (p *nginxParser) doInclude() error {
 			}
 			importedFiles = append(importedFiles, matches...)
 		}
+	}
+
+	if len(importedFiles) == 0 {
+		return fmt.Errorf("included file is not found: %s:%d %s", includeToken.file, includeToken.line, includeArg)
 	}
 
 	var importedTokens []token
@@ -222,7 +269,7 @@ func (p *nginxParser) doSingleInclude(importFile string) ([]token, error) {
 // It returns all the tokens from the input, unstructured
 // and in order.
 func allTokens(filename string, input []byte) []token {
-	tokens := tokenize(input)
+	tokens := tokenize(input, filename)
 	for i := range tokens {
 		tokens[i].file = filename
 	}

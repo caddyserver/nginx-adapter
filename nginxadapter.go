@@ -17,6 +17,7 @@ package nginxconf
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -38,7 +39,12 @@ type Adapter struct{}
 
 // Adapt converts the NGINX config in body to Caddy JSON.
 func (Adapter) Adapt(body []byte, options map[string]interface{}) ([]byte, []caddyconfig.Warning, error) {
-	tokens := tokenize(body)
+	filename := "nginx.conf"
+	if v, ok := options["filename"].(string); ok {
+		filename = v
+		filename, _ = filepath.Abs(filename)
+	}
+	tokens := tokenize(body, filename)
 	dirs, err := parse(tokens)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parsing: %v", err)
