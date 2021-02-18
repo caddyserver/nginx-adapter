@@ -67,11 +67,7 @@ func (Adapter) Adapt(body []byte, options map[string]interface{}) ([]byte, []cad
 		"http": caddyconfig.JSON(httpApp, &warnings),
 	}
 
-	marshalFunc := json.Marshal
-	if options["pretty"] == "true" {
-		marshalFunc = caddyconfig.JSONIndent
-	}
-	result, err := marshalFunc(ss.mainConfig)
+	result, err := json.Marshal(ss.mainConfig)
 
 	return result, warnings, err
 }
