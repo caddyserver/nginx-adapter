@@ -451,7 +451,7 @@ func processReturn(dir Directive) (caddyhttp.StaticResponse, []caddyconfig.Warni
 			}
 		}
 	} else {
-		h.StatusCode = caddyhttp.WeakString(http.StatusFound)
+		h.StatusCode = caddyhttp.WeakString(strconv.Itoa(http.StatusFound))
 		h.Headers = http.Header{"Location": []string{arg}}
 	}
 	return h, warns
