@@ -170,7 +170,7 @@ func getCaddyVar(nginxVar string) string {
 	// variables prefixed with `$http_` correspond to respective header field with the suffix name
 	// Source: https://nginx.org/en/docs/http/ngx_http_core_module.html#var_http_
 	if strings.HasPrefix(nginxVar, "$http_") {
-		return fmt.Sprintf("{http.request.header.%s}", strings.TrimPrefix(nginxVar, "$header_"))
+		return fmt.Sprintf("{http.request.header.%s}", strings.TrimPrefix(nginxVar, "$http_"))
 	}
 	return fmt.Sprintf("{http.vars.%s}", strings.TrimPrefix(nginxVar, "$"))
 }
