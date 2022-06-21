@@ -109,7 +109,7 @@ func calculateIfMatcher(dir Directive) (caddy.ModuleMap, []caddyconfig.Warning) 
 	case 2: // something like this: if ($invalid_referer)
 		arg := strings.Trim(dir.Param(1), "()")
 		routeMatcher = caddy.ModuleMap{
-			"vars": caddyconfig.JSON(caddyhttp.VarsMatcher{getCaddyVar(arg): "true"}, &warns),
+			"vars": caddyconfig.JSON(caddyhttp.VarsMatcher{getCaddyVar(arg): []string{"true"}}, &warns),
 		}
 	case 4: // something like this: if ($http_cookie ~* "id=([^;]+)(?:;|$)")
 		loperand, op, roperand := strings.TrimLeft(dir.Param(1), "("), dir.Param(2), strings.TrimRight(dir.Param(3), ")")
@@ -119,7 +119,7 @@ func calculateIfMatcher(dir Directive) (caddy.ModuleMap, []caddyconfig.Warning) 
 			// as wildcard matcher.
 			// https://github.com/caddyserver/caddy/blob/271b5af14894a8cca5fc6aa6f1c17823a1fb5ff3/modules/caddyhttp/server.go#L139
 			routeMatcher = caddy.ModuleMap{
-				"vars": caddyconfig.JSON(caddyhttp.VarsMatcher{getCaddyVar(loperand): roperand}, &warns),
+				"vars": caddyconfig.JSON(caddyhttp.VarsMatcher{getCaddyVar(loperand): []string{roperand}}, &warns),
 			}
 		case "~", "!~", "~*", "!~*": // regexps
 			pattern := roperand
