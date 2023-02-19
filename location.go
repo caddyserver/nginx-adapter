@@ -146,6 +146,7 @@ nextDirective:
 				Message:   ErrUnrecognized,
 			})
 		}
+		warnings = append(warnings, warns...)
 	}
 
 	r := caddyhttp.Route{}

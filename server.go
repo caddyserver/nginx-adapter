@@ -108,15 +108,14 @@ nextDirective:
 
 			locationMatcherSet := append(matcherSets[:], matchConfMap)
 			subroutes, warns, err := ss.locationContext(matchConfMap, dir.Block)
+			warnings = append(warnings, warns...)
 			if err != nil || len(subroutes) == 0 {
-				warnings = append(warnings, warns...)
 				return warnings, err
 			}
 			var matcherSetsEnc caddyhttp.RawMatcherSets
 			// encode the matchers then set the result as raw matcher config
 			matcherSetsEnc, err = encodeMatcherSets(locationMatcherSet)
 			if err != nil {
-				warnings = append(warnings, warns...)
 				return warnings, err
 			}
 			// set the matcher to route
