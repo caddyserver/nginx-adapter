@@ -60,13 +60,11 @@ Thank you, and we hope you have fun with it!
 
 ## Install
 
-First, the [xcaddy](https://github.com/caddyserver/xcaddy) command:
+First, ensure your GOROOT and GOPATH environment variables are correct for your environment.
 
-```shell
-$ go get -u github.com/caddyserver/xcaddy/cmd/xcaddy
-```
+Then, follow the xcaddy install process [here](https://github.com/caddyserver/xcaddy#install).
 
-Then build Caddy with this Go module plugged in. For example:
+Then, build Caddy with this Go module plugged in. For example:
 
 ```shell
 $ xcaddy build --with github.com/caddyserver/nginx-adapter
