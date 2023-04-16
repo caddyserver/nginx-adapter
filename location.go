@@ -45,7 +45,11 @@ nextDirective:
 						It basically terminates location block matching.
 						https://www.keycdn.com/support/nginx-location-directive
 					*/
-					matchConfMap["path"] = caddyhttp.MatchPath([]string{dir.Param(2) + "*"})
+					p := dir.Param(2)
+					if !strings.HasSuffix(p, "*") {
+						p += "*"
+					}
+					matchConfMap["path"] = caddyhttp.MatchPath([]string{p})
 					warns = append(warns, caddyconfig.Warning{
 						File:      dir.File,
 						Line:      dir.Line,
@@ -64,7 +68,11 @@ nextDirective:
 					continue nextDirective
 				}
 				// append wild character because nginx treat naked path matchers as prefix matchers
-				matchConfMap["path"] = caddyhttp.MatchPath([]string{dir.Param(1) + "*"})
+				p := dir.Param(1)
+				if !strings.HasSuffix(p, "*") {
+					p += "*"
+				}
+				matchConfMap["path"] = caddyhttp.MatchPath([]string{p})
 			}
 			subsubroutes, warns, err := ss.locationContext(matchConfMap, dir.Block)
 			if err != nil || len(subsubroutes) == 0 {
