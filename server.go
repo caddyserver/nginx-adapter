@@ -227,7 +227,9 @@ nextDirective:
 			}
 		}
 		ss.mainConfig.Logging.Logs[loggerName] = &caddy.CustomLog{
-			WriterRaw: loggerJSON,
+			BaseLog: caddy.BaseLog{
+				WriterRaw: loggerJSON,
+			},
 		}
 
 		if srv.Logs == nil {
