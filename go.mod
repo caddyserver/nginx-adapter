@@ -1,6 +1,6 @@
 module github.com/caddyserver/nginx-adapter
 
-go 1.20
+go 1.21
 
 require (
 	github.com/caddyserver/caddy/v2 v2.7.0-beta.2
