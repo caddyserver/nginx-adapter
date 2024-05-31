@@ -90,7 +90,6 @@ nextDirective:
 						Message:   "the adapter treats the ^~ location modifier as prefix match only, with no prioritization",
 					})
 				}
-
 			} else if len(dir.Params) == 2 { // only path
 				if strings.HasPrefix(dir.Param(1), "@") {
 					warnings = append(warnings, caddyconfig.Warning{
@@ -234,11 +233,11 @@ nextDirective:
 
 		if srv.Logs == nil {
 			srv.Logs = &caddyhttp.ServerLogConfig{
-				LoggerNames: make(map[string]string),
+				LoggerNames: make(map[string]caddyhttp.StringArray),
 			}
 		}
 		for _, v := range hosts {
-			srv.Logs.LoggerNames[v] = loggerName
+			srv.Logs.LoggerNames[v] = caddyhttp.StringArray{loggerName}
 		}
 	}
 	ss.servers[srvName] = srv
