@@ -30,9 +30,11 @@ func init() {
 	caddyconfig.RegisterAdapter("nginx", Adapter{})
 }
 
-const ErrUnrecognized = "unrecognized or unsupported nginx directive"
-const ErrNamedLocation = "named locations marked by @ are unnsupported"
-const ErrExpiresAtTime = "usage of `expires @time` is not supported"
+const (
+	ErrUnrecognized  = "unrecognized or unsupported nginx directive"
+	ErrNamedLocation = "named locations marked by @ are unnsupported"
+	ErrExpiresAtTime = "usage of `expires @time` is not supported"
+)
 
 // Adapter adapts NGINX config to Caddy JSON.
 type Adapter struct{}
@@ -44,8 +46,7 @@ func (Adapter) Adapt(body []byte, options map[string]interface{}) ([]byte, []cad
 		filename = v
 		filename, _ = filepath.Abs(filename)
 	}
-	tokens := tokenize(body, filename)
-	dirs, err := parse(tokens)
+	dirs, err := parseNginxConfig(body, filename)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parsing: %v", err)
 	}
